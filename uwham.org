@@ -44,7 +44,7 @@
 **** raw_data_file
 	 The path of this file is the first column in the "input_file". This file has $n_i$ lines, each line is an
 	 observation. Each observation can have multiple data for different properties of that observation. In the wham
-	 code, thery are stored in an array called "variable".
+	 code, they are stored in an array called "variable".
 **** c++ program
 	 One needs to change the "potential_energy" subroutine code in "uwham.cpp" so that the program can calculate the
 	 potential energy of each observation at each state from the observation data (variable) and the thermodynamic and
@@ -100,80 +100,119 @@
    $\Delta f = \frac {|f_{new} - f_{old}|}{f_{old}}$. If all the $\Delta f$ are smaller than the tolerance_error or the
    number of iteration is larger than the iteration_number, the wham program will stop iterations and write the output. 
   
-* output files:
+* output files
+** free energy differences
+   The unitless free energy differences are printed on the screen.
 ** weights
-   This output file "weight.data" has the weights for all the observations at each state. The first line is a comment
-   line. Each column represents one state.
+   The output file "weight.data" contains the weights for all the observations at each interested state. The first line
+   is a comment line. Each column represents one state.
 ** raw data
-   If the input for wham program includes observations and parameters. All the observations will be collected together
+   If the the observations and parameters are passed to the program, all the observations will be collected together
    in the "all.data" file.
 
 * examples:
-** dowload the rawdata of examples from 
-   https://ronlevygroup.cst.temple.edu/levygroup_software.html
+  download the raw data of examples from https://ronlevygroup.cst.temple.edu/levygroup_software.html
 
 ** Example 01: Heptanoate $\beta$-cyclodextrins Binding System
-   includes the combinations of 1 temperatures — (300 K) and 16 $\lambda$ values — (0.0, 0.001, 0.002,
-   0.004, 0.01, 0.04, 0.07, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
-*** run uwham with observations and parameters
-	- the input file: There are four columns in this file. The first column is the path of the rawdata file. The
+   This example explains how to analyze data generated from a BEDAM RE simulation. The simulation was run at $300K$, with
+   16 $\lambda$ values — (0.0, 0.001, 0.002, 0.004, 0.01, 0.04, 0.07, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+*** pass the observations and parameters
+	- the "input" file: There are four columns in this file. The first column is the path of the raw data file. The
       second column is the print tag. The third column is the temperature(parameter[0]). The forth column is the
       $\lambda$ value (parameter[1])
+
 	  /-------------\________________________________________________
+
 	  RawData/T_300_lambda_00.cluster  1        300              0
+
 	  RawData/T_300_lambda_01.cluster  1        300          0.001
+
 	  RawData/T_300_lambda_02.cluster  1        300          0.002 
+
 	  .
+
 	  .
+
 	  .
+
 	  ______________________________________________________________
 
-	- the rawdata file: There are three columns in the file. The first column is the binding energy(variable[0]). The
-      second column is useless in this example. The third column is the potential energy without the binding energy
-      (variable[2]).
+	- the raw data file: There are three columns in the file. The first column is the binding energy(variable[0]). The
+      second column is useless in this example. The third column is the total potential energy when the interaction
+      between the host and the guest is turned off (variable[2]).
+
 	  /-------------\________________________________________________
+
 	  -19.2882  74      139.114 
+
 	  -17.4974  76       139.01   
+
 	  -17.2204  76      122.739 
+
 	  .
+
 	  .
+
 	  .
+
 	  ______________________________________________________________
 
-	- change the the "potential_energy" subroutine:
+	- in the "potential_energy" subroutine:
+	  #+begin_src c++
 	  energy = (variable[2] + parameter[1]*variable[0])/(parameter[0]*kB); // potential energy in unit of k_B*T
+	  #+end_src
 
 	- how to run
+
 	  uwham.o -f input -m 0 -e 1.0e-6
+
 	  or
+
 	  uwham.o -f input -m 1 -e 1.0e-6	  
 
-*** run uwham with potential energy matrix 
-	- the potential energy matrix file: MatrixPE
-	  In this example, the rawdata were generated from $16$ states, each state has $144000$ observations. Therefore this
-      is a $2304000 \times 16$ matrix.
+*** pass the potential energy matrix and the number of observations at each state 
+	- the potential energy matrix file: "MatrixPE"
+
+	  In this example, the raw data were generated from $16$ states, each state has $144000$ observations. Therefore the
+      potential energy matrix is a $2304000 \times 16$ matrix.
 	  
-	- the input file: Einput
+	- the input file: "Einput"
+
 	  /-------------\________________________________________________
+
 	  144000  1
+
 	  144000  1
+
 	  144000  1
+
 	  .
+
 	  .
+
 	  .
+
 	  ______________________________________________________________
 
 	- how to run
+
 	  uwham.o -x MatrixPE -f Einput -m 0 -e 1.0e-6
+
 	  or
+
 	  uwham.o -x MatrixPE -f Einput -m 1 -e 1.0e-6	  
 	  
 ** Example 02: Heptanoate $\beta$-cyclodextrins Binding System
-   includes the combinations of 3 temperatures — (267 K, 283 K, 300 K) and 16 $\lambda$ values — (0.0, 0.001, 0.002,
-   0.004, 0.01, 0.04, 0.07, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+   This example explains how to analyze data generated by three independent one-dimensional BEDAM RE simulations run at
+   $(267 K, 283 K, 300 K)$. Each RE simulation has 16 $\lambda$ values — (0.0, 0.001, 0.002, 0.004, 0.01, 0.04, 0.07,
+   0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0) 
+
    - how to run
+
 	 uwham.o -f input -m 0 -e 1.0e-6
+
 	 or
+
 	 uwham.o -f input -m 1 -e 1.0e-6	  
 	 
    
