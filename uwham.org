@@ -1,57 +1,57 @@
 * how to install
-  - dependence: requires "GNU scientific library"
-	http://www.gnu.org/software/gsl/
-  - compile:
-	 g++ wham.cpp -lm -lgsl -lgslcblas 
+** dependence
+   requires "GNU scientific library", see http://www.gnu.org/software/gsl/
+** compile
+   g++ wham.cpp -lm -lgsl -lgslcblas 
 	
-* options list:
+* options list
   |---+----------------------------------|
-  | h | print out help information       |
+  | h | print out the help information   |
   | x | the potential energy matrix file |
-  | f | input file                       |
-  | m | iteration method                 |
-  | g | converge factor                  |
-  | q | equilibrium period               |
-  | n | iteration number                 |
-  | e | error tolerance                  |
+  | f | the input file                   |
+  | m | the iteration method             |
+  | g | the converge factor              |
+  | q | the equilibrium period           |
+  | n | the number of iteration          |
+  | e | the error tolerance              |
   |---+----------------------------------|
 
-* input files:
-  To calculate the free energy differences between states and optimal estimates for each state, wham require the
+* input files
+  To calculate the free energy differences between states and optimal estimates for each state, wham requires the
   following information:
   - the number of observations at each state
-  - the probability of observing that observation at each state. Suppose the data are sampled from multiple coupled or
-    independent canonical ensembles, the probability of each distinct microstate is 
-  \begin{equation}
-  p=exp\left{ \frac{-E}{k_B T} \right}
-  \end{equation}
-  where E is the potential energy.
+  - the probability of observing an observation at each state. Suppose the data are sampled from multiple coupled or
+    independent canonical ensembles, the probability of each distinct microstate is $p=exp\left{ \frac{-E}{k_B T}
+    \right}$, where E is the potential energy.
  
   Suppose there are $m$ states, $n_i$ observations at each state. $N=\sum n_i$ is the total number of
   observations. Since wham does not use the information that from which state the observation is observed, we can
-  reindex all the observations from $0$ to $(N-1)$.  There are two different ways to input all the required information
-  to wham program.
+  reindex all the observations from $0$ to $(N-1)$.  There are two different ways to pass all the required information
+  to the wham program:
+  - pass the observations and parameters
+  - pass the potential energy matrix and number of observations at each state
 
-** observations and parameters
+** pass the observations and parameters to wham
 *** options
 	-f input_file
 *** file format
 **** input_file
 	 This file has $m$ lines representing $m$ states. The first column of each line is a character string, which is the
 	 path of the "raw_data_file" of that state. The second column is a print tag. When the print tag is not $0$, wham
-	 program will calculate the weight of each observation at that state and print them out. The columns from the third
+	 program calculates the weight of each observation at that state and print them out. The columns from the third
 	 to the end of the line are the thermodynamic and Hamiltonian parameters of that state. In the wham code, they are
-	 stored in an array called "parameter".
+	 stored in an array called "parameter". Do NOT add blank lines to the end of this file.
 **** raw_data_file
-	 The path of this file is in the first column in the "input_file". This file has $n_i$ lines, each line is an
+	 The path of this file is the first column in the "input_file". This file has $n_i$ lines, each line is an
 	 observation. Each observation can have multiple data for different properties of that observation. In the wham
 	 code, thery are stored in an array called "variable".
 **** c++ program
-	 One needs to change the "potential_energy" subroutine code so that wham program can calculate the potential energy
-	 of each observation at each state based on the observation data (variable) and the thermodynamic and Hamiltonian
-	 parameters(parameters). The potential energy is a function of "parameter" and "variable".
+	 One needs to change the "potential_energy" subroutine code in "uwham.cpp" so that the program can calculate the
+	 potential energy of each observation at each state from the observation data (variable) and the thermodynamic and
+	 Hamiltonian parameters(parameters). In other words, the potential energy is a function of "parameter" and
+	 "variable". The potential energy is in units of $k_B T$, where $T$ is the temperature.
 
-** potential energy matrix 
+** pass the potential energy matrix and number of observations at each state
 *** options
 	-x potential_energy_matrix -f input_file
 *** file format
@@ -60,12 +60,13 @@
 	 observation at the $j^{th}$ state. The energy is in units of $k_B T$.
 **** input_file
 	 This file has $m$ lines representing $m$ states, each line has two columns. The first column is the number of
-	 observations at that state. The second column is a print tag. When the print tag is not $0$, wham program will
-	 calculate the weight of each observation at that state and print them out. 
+	 observations at that state. The second column is a print tag. When the print tag is not $0$, wham program
+	 calculates the weight of each observation at that state and print them out.  
+**** c++ program
+	 One does not need to change the c++ program.
 
-
-* iteration methods:
-  Three iteration methods have been implemented in this wham program
+* iteration methods
+  Two iteration methods have been implemented in this wham program
 ** self-consistent iteration 
    This is the basic iteration method. It is slow but robust, and uses less memory. It calculates the density of states
    based on previous values of partition functions, then calculates the partition functions bases on the density of
@@ -74,35 +75,30 @@
 	-m 0
 
 ** Convex Newton-Raphson 
-   This method optimize the convex function by Newton-Raphson algorithm. See Ref(2). It converges much faster than the
-   self-consistent iteration, but less stable and uses more memory. The Newton-Raphson solver needs the GNU scientific
-   library for matrix inversion. 
+   This method solves uwham equations by optimizing a convex function using the Newton-Raphson algorithm. See Ref(1). It
+   converges much faster than the self-consistent iteration, but less stable and uses more memory. The Newton-Raphson
+   solver needs the GNU scientific library for matrix inversion.
 *** options
 	-m 1 -q 1 -g 1
 	- option m: "1" means "Convex Newton-Raphson" method
-	- option q: the initial guesses are critical for the Newton-Raphson solver to converge. This wham program uses the
+	- option q: the initial guesses are critical for the Newton-Raphson solver to converge. This program uses the
       "self-consistent iteration" to obtain the initial guesses. The number given to the option "q" decides how many
       self-consistent iterations run before using the Newton-Raphson solver to minimize the convex function. The default
-      value is "1" for this option, which is enough for the examples we tested. One can increase the number if the
-      Newton-Raphson cannot converge.
+      value is "1", which is enough for the examples we tested. One can increase the number if the Newton-Raphson solver
+      cannot converge.
 	- option g: this option control the step size of the Newton-Raphson solver. This step size factor increases during the
       running of the Newton-Raphson solver. For example, if the value of this option is $\delta$, in the $n^{th}$ step
-      of the Newton-Raphson solver   
-	  \begin{equation}
-	  x_{n+1} = x_{n} - a*\frac{f(x_n)}{f'(x_n)}\,,
-	  \end{equation}
-	  where $a=min(1.0, n\delta)$ and $f'(x_n)$ is the derivative of function $f(x_n)$. The default value of this option
-      is "1". 
+      of the Newton-Raphson solver calculate the next guess of solution following equation $x_{n+1} = x_{n} -
+      a*\frac{f(x_n)}{f'(x_n)}$ where $a=min(1.0, n\delta)$ and $f'(x_n)$ is the derivative of function $f(x_n)$. The
+      default value of this option is "1". One can decrease this factor if the Newton-Raphson solver cannot converge.
 
-* error tolerance:
+* error tolerance
 ** options 
    -e tolerance_error -n iteration_number
+
    At the end of each iteration, wham program calculates the free energy estimates change
-   \begin{equation}
-   \Delta f = \frac {|f_{new} - f_{old}|}{f_{old}}
-   \end{equation}
-   If all the $\Delta f$ are smaller than the tolerance_error or the number of iteration is larger than the
-   iteration_number, the wham program will stop iteration and write the output.
+   $\Delta f = \frac {|f_{new} - f_{old}|}{f_{old}}$. If all the $\Delta f$ are smaller than the tolerance_error or the
+   number of iteration is larger than the iteration_number, the wham program will stop iterations and write the output. 
   
 * output files:
 ** weights
@@ -182,6 +178,5 @@
 	 
    
 * references:
-  (1) Statistically optimal analysis of samples from multiple equilibrium states (DOI:10.1063/1.2978177)
-  (2) Theory of binless multi-state free energy estimation with applications to protein-ligand binding (DOI:
+  (1) Theory of binless multi-state free energy estimation with applications to protein-ligand binding (DOI:
   10.1063/1.3701175)
