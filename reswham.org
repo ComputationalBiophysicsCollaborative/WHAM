@@ -1,0 +1,67 @@
+* Introduction:
+  "RESWHAM.cpp" is the C++ version of RE-SWHAM. 
+  "histgram.pl" is a perl script to construct histogram.
+
+* RE-SWHAM program:
+** Compile 
+   g++ -lm RESWHAM.cpp -o RESWHAM.o
+
+** Options:
+   see options by run "./RESWHAM.o -h"
+   1. -f: the input file. The first row of this file is the temperature list. The second raw is the lambda list.
+	  The raw data of each thermodynamic state are in a file under the input directory. For example, for thermodynamic
+      state at T=300, lambda=0.001 (first lambda in the lambda list), the program opens the file
+      "input/T_300_lambda_01.cluster" to obtain the raw data. 
+   2. -t: the argument of this option is a temperature. The information of replicas at this temperature will be printed
+      out. Setting this option to 0 means choosing all temperatures.
+   3. -l: the argument of this option is an integer 'l', which means choosing the last 'l' lambda values. One needs to
+      combine this option and '-t' option to choose which thermodynamic states are the interested states. For example, when
+      the lambdalist is "0.0  0.001  0.002  0.004  0.01  0.04  0.07  0.1  0.2  0.4  0.6  0.7  0.8  0.9  0.95  1.0", "-t
+      300 -l 2" means choosing the states "T=300, lambda=1.0" and "T=300, lambda=0.95" are chosen, the information of
+      replica at these two thermodynamic states will be printed out.
+   4. -n: How many RE cycles to run.
+   5. -a: the number of exchange attempts per RE cycle.
+   6. -e: the period of equilibrium in the unit of RE cycles. If the raw data are not full converged, one can run
+      RE-SWHAM program for a while without printing out the data stream until the database in RE-SHWAM has no
+      correlation with the initial raw data.  
+   7. -q: the frequency to print out information, also in the unit of RE cycles.
+   8. -i: which information to print out:
+	  0: the binding energy and potential energy of each replica 
+	  1: free energy difference
+
+* Examples:
+* Example 01
+** Introduction:
+   First numerical example in the paper.
+   T: 300
+   Lambda: 0.0  0.001  0.002  0.004  0.01  0.04  0.07  0.1  0.2  0.4  0.6  0.7  0.8  0.9  0.95  1.0
+** Run RE-SWHAM:
+   in the Example_01 directory, run 
+   ./RESWHAM.o -f 1Tlambdalist -t 300 -l 2 -n 1000000 -a 250 -e 1000000 > swham.result 
+** Output of RE-SWHAM
+   - thermodynamic states are a two dimensional grid of temperature of lambda values. The output prints out the lowest
+     temperature and smallest lambda state first, then the lowest temperature and the second smallest lambda state,
+     ... until the highest temperature and the largest lambda state.
+   - there are two columns for each thermodynamic state, the first is the binding energy, the second is the potential
+     energy excluding binding energy.
+   - in this example, there are four columns in the file "swham.result"
+     |---------+----------------+------------------+----------------+------------------|
+     | columns | 1              | 2                | 3              | 4                |
+     |---------+----------------+------------------+----------------+------------------|
+     | state   | T=300          | T=300            | T=300          | T=300            |
+     | and     | lambda=0.95    | lambda=0.95      | lambda=1.0     | lambda=1.0       |
+     | info    | binding energy | potential energy | binding energy | potential energy |
+     |---------+----------------+------------------+----------------+------------------|
+** Compare the binding energy distribution with the UWHAM estimate:
+   let compare the biding energy distribution at T=300, lambda=0.95 state.
+   - ../histgram.pl -f input/T_300_lambda_14.cluster -i 1 -n -40 -x 5 -b 80 > rawdata.hist
+	 this command will construct a histogram using the first column data in 'input/T_300_lambda_14.cluster', the range
+     of this histogram is from -40 to 5, the number of bins is 80.
+   - ../histgram.pl -f swham.result -i 1 -n -40 -x 5 -b 80 > swham.hist
+	 this command will construct a histogram using the first column data in 'swham.result', the range of this histogram
+     is from -40 to 5, the number of bins is 80.
+   - ../histgram.pl -f uwham/wham.data -i 1 -w uwham/weight_300_15 -j 1 -n -40 -x 5 -b 80 > uwham.hist
+	 this command will construct a histogram using the first column in 'uwham/wham.data' as data, the first column in
+     "uwham/weight_300_15" as weights, the range of this histogram is from -40 to 5, the number of bins is 80.	 
+   - compare these three histograms using gnuplot.
+   

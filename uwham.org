@@ -1,0 +1,187 @@
+* how to install
+  - dependence: requires "GNU scientific library"
+	http://www.gnu.org/software/gsl/
+  - compile:
+	 g++ wham.cpp -lm -lgsl -lgslcblas 
+	
+* options list:
+  |---+----------------------------------|
+  | h | print out help information       |
+  | x | the potential energy matrix file |
+  | f | input file                       |
+  | m | iteration method                 |
+  | g | converge factor                  |
+  | q | equilibrium period               |
+  | n | iteration number                 |
+  | e | error tolerance                  |
+  |---+----------------------------------|
+
+* input files:
+  To calculate the free energy differences between states and optimal estimates for each state, wham require the
+  following information:
+  - the number of observations at each state
+  - the probability of observing that observation at each state. Suppose the data are sampled from multiple coupled or
+    independent canonical ensembles, the probability of each distinct microstate is 
+  \begin{equation}
+  p=exp\left{ \frac{-E}{k_B T} \right}
+  \end{equation}
+  where E is the potential energy.
+ 
+  Suppose there are $m$ states, $n_i$ observations at each state. $N=\sum n_i$ is the total number of
+  observations. Since wham does not use the information that from which state the observation is observed, we can
+  reindex all the observations from $0$ to $(N-1)$.  There are two different ways to input all the required information
+  to wham program.
+
+** observations and parameters
+*** options
+	-f input_file
+*** file format
+**** input_file
+	 This file has $m$ lines representing $m$ states. The first column of each line is a character string, which is the
+	 path of the "raw_data_file" of that state. The second column is a print tag. When the print tag is not $0$, wham
+	 program will calculate the weight of each observation at that state and print them out. The columns from the third
+	 to the end of the line are the thermodynamic and Hamiltonian parameters of that state. In the wham code, they are
+	 stored in an array called "parameter".
+**** raw_data_file
+	 The path of this file is in the first column in the "input_file". This file has $n_i$ lines, each line is an
+	 observation. Each observation can have multiple data for different properties of that observation. In the wham
+	 code, thery are stored in an array called "variable".
+**** c++ program
+	 One needs to change the "potential_energy" subroutine code so that wham program can calculate the potential energy
+	 of each observation at each state based on the observation data (variable) and the thermodynamic and Hamiltonian
+	 parameters(parameters). The potential energy is a function of "parameter" and "variable".
+
+** potential energy matrix 
+*** options
+	-x potential_energy_matrix -f input_file
+*** file format
+**** potential_energy_matrix
+	 This file contains a $N \times m$ matrix, the matrix element $p_{ij}$ is the potential energy of the $i^{th}$
+	 observation at the $j^{th}$ state. The energy is in units of $k_B T$.
+**** input_file
+	 This file has $m$ lines representing $m$ states, each line has two columns. The first column is the number of
+	 observations at that state. The second column is a print tag. When the print tag is not $0$, wham program will
+	 calculate the weight of each observation at that state and print them out. 
+
+
+* iteration methods:
+  Three iteration methods have been implemented in this wham program
+** self-consistent iteration 
+   This is the basic iteration method. It is slow but robust, and uses less memory. It calculates the density of states
+   based on previous values of partition functions, then calculates the partition functions bases on the density of
+   states, so on and so forth.
+*** options
+	-m 0
+
+** Convex Newton-Raphson 
+   This method optimize the convex function by Newton-Raphson algorithm. See Ref(2). It converges much faster than the
+   self-consistent iteration, but less stable and uses more memory. The Newton-Raphson solver needs the GNU scientific
+   library for matrix inversion. 
+*** options
+	-m 1 -q 1 -g 1
+	- option m: "1" means "Convex Newton-Raphson" method
+	- option q: the initial guesses are critical for the Newton-Raphson solver to converge. This wham program uses the
+      "self-consistent iteration" to obtain the initial guesses. The number given to the option "q" decides how many
+      self-consistent iterations run before using the Newton-Raphson solver to minimize the convex function. The default
+      value is "1" for this option, which is enough for the examples we tested. One can increase the number if the
+      Newton-Raphson cannot converge.
+	- option g: this option control the step size of the Newton-Raphson solver. This step size factor increases during the
+      running of the Newton-Raphson solver. For example, if the value of this option is $\delta$, in the $n^{th}$ step
+      of the Newton-Raphson solver   
+	  \begin{equation}
+	  x_{n+1} = x_{n} - a*\frac{f(x_n)}{f'(x_n)}\,,
+	  \end{equation}
+	  where $a=min(1.0, n\delta)$ and $f'(x_n)$ is the derivative of function $f(x_n)$. The default value of this option
+      is "1". 
+
+* error tolerance:
+** options 
+   -e tolerance_error -n iteration_number
+   At the end of each iteration, wham program calculates the free energy estimates change
+   \begin{equation}
+   \Delta f = \frac {|f_{new} - f_{old}|}{f_{old}}
+   \end{equation}
+   If all the $\Delta f$ are smaller than the tolerance_error or the number of iteration is larger than the
+   iteration_number, the wham program will stop iteration and write the output.
+  
+* output files:
+** weights
+   This output file "weight.data" has the weights for all the observations at each state. The first line is a comment
+   line. Each column represents one state.
+** raw data
+   If the input for wham program includes observations and parameters. All the observations will be collected together
+   in the "all.data" file.
+
+* examples:
+** dowload the rawdata of examples from 
+   https://ronlevygroup.cst.temple.edu/levygroup_software.html
+
+** Example 01: Heptanoate $\beta$-cyclodextrins Binding System
+   includes the combinations of 1 temperatures — (300 K) and 16 $\lambda$ values — (0.0, 0.001, 0.002,
+   0.004, 0.01, 0.04, 0.07, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+*** run uwham with observations and parameters
+	- the input file: There are four columns in this file. The first column is the path of the rawdata file. The
+      second column is the print tag. The third column is the temperature(parameter[0]). The forth column is the
+      $\lambda$ value (parameter[1])
+	  /-------------\________________________________________________
+	  RawData/T_300_lambda_00.cluster  1        300              0
+	  RawData/T_300_lambda_01.cluster  1        300          0.001
+	  RawData/T_300_lambda_02.cluster  1        300          0.002 
+	  .
+	  .
+	  .
+	  ______________________________________________________________
+
+	- the rawdata file: There are three columns in the file. The first column is the binding energy(variable[0]). The
+      second column is useless in this example. The third column is the potential energy without the binding energy
+      (variable[2]).
+	  /-------------\________________________________________________
+	  -19.2882  74      139.114 
+	  -17.4974  76       139.01   
+	  -17.2204  76      122.739 
+	  .
+	  .
+	  .
+	  ______________________________________________________________
+
+	- change the the "potential_energy" subroutine:
+	  energy = (variable[2] + parameter[1]*variable[0])/(parameter[0]*kB); // potential energy in unit of k_B*T
+
+	- how to run
+	  uwham.o -f input -m 0 -e 1.0e-6
+	  or
+	  uwham.o -f input -m 1 -e 1.0e-6	  
+
+*** run uwham with potential energy matrix 
+	- the potential energy matrix file: MatrixPE
+	  In this example, the rawdata were generated from $16$ states, each state has $144000$ observations. Therefore this
+      is a $2304000 \times 16$ matrix.
+	  
+	- the input file: Einput
+	  /-------------\________________________________________________
+	  144000  1
+	  144000  1
+	  144000  1
+	  .
+	  .
+	  .
+	  ______________________________________________________________
+
+	- how to run
+	  uwham.o -x MatrixPE -f Einput -m 0 -e 1.0e-6
+	  or
+	  uwham.o -x MatrixPE -f Einput -m 1 -e 1.0e-6	  
+	  
+** Example 02: Heptanoate $\beta$-cyclodextrins Binding System
+   includes the combinations of 3 temperatures — (267 K, 283 K, 300 K) and 16 $\lambda$ values — (0.0, 0.001, 0.002,
+   0.004, 0.01, 0.04, 0.07, 0.1, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 0.95, 1.0)
+   - how to run
+	 uwham.o -f input -m 0 -e 1.0e-6
+	 or
+	 uwham.o -f input -m 1 -e 1.0e-6	  
+	 
+   
+* references:
+  (1) Statistically optimal analysis of samples from multiple equilibrium states (DOI:10.1063/1.2978177)
+  (2) Theory of binless multi-state free energy estimation with applications to protein-ligand binding (DOI:
+  10.1063/1.3701175)
